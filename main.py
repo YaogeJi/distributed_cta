@@ -29,7 +29,7 @@ parser.add_argument("--iter_type", choices=("lagrangian", "projected"))
 parser.add_argument("--gamma", type=float)
 parser.add_argument("--lmda", type=float)
 ## others
-parser.add_argument("--verbose", action="storing_true")
+parser.add_argument("--verbose", action="store_true")
 args = parser.parse_args()
 
 
