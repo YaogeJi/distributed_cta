@@ -1,6 +1,7 @@
 from solver import *
 import argparse
 import pickle
+import os
 from generator import Generator
 from network import ErodoRenyi
 
@@ -10,7 +11,7 @@ parser = argparse.ArgumentParser(description='distributed optimization')
 parser.add_argument('--storing_file', default='', type=str, help='storing_file_name')
 ## data
 parser.add_argument("-N", "--num_samples", type=int)
-parser.add_argument("-d", "--num_dimension", type=int)
+parser.add_argument("-d", "--num_dimensions", type=int)
 parser.add_argument("-s", "--sparsity", type=int)
 parser.add_argument("-k", type=float, default=0.25)
 parser.add_argument("--sigma", type=float, default=0.5)
@@ -18,10 +19,9 @@ parser.add_argument("--data_index", type=int, default=0)
 
 ## network
 parser.add_argument("-m", "--num_nodes", type=int)
-parser.add_argument("-p", "--probability", type=float)
-parser.add_argument("-rho", "--connectivity", type=float)
+parser.add_argument("-p", "--probability", default=1, type=float)
+parser.add_argument("-rho", "--connectivity", default=0, type=float)
 ## solver
-parser.add_argument("-r", "--project_radius", type=float)
 parser.add_argument("--solver_mode", choices=("centralized", "distributed", "localized"))
 parser.add_argument("--max_iter", type=int, default=1e6)
 parser.add_argument("--tol", type=float, default=1e-10)
@@ -32,26 +32,30 @@ parser.add_argument("--lmda", type=float)
 parser.add_argument("--verbose", action="store_true")
 args = parser.parse_args()
 
-
 def main():
     # preprocessing data
-    data_path = "./data/N{}_d{}_s{}_k{}_sigma{}/exp{}.data".format(
-        args.N, args.d, args.s, args.k, args.sigma, args.data_index)
-    network_path = "./network/m{}_p{}_rho{}.network".format(args.m, args.p, args.rho)
-    try:
-        w = pickle.load(open(network_path, "rb"))
-    except:
-        w = ErodoRenyi(m=args.m, rho=args.rho, p=args.p)
-        pickle.dump(w, open(network_path, "wb"))
+    data_path = "./data/N{}_d{}_s{}_k{}_sigma{}/".format(
+        args.num_samples, args.num_dimensions, args.sparsity, args.k, args.sigma)
+    data_file = data_path + "exp{}.data".format(args.data_index)
+    network_path = "./network/"
+    network_file = network_path + "m{}_p{}_rho{}.network".format(args.num_nodes, args.probability, args.connectivity)
+
     ## processing data
     try:
-        X, Y, ground_truth, optimal_lambda, min_stat_error = pickle.load(open(data_path, "rb"))
+        X, Y, ground_truth, optimal_lambda, min_stat_error = pickle.load(open(data_file, "rb"))
     except FileNotFoundError:
-        generator = Generator(args.N, args.d, args.s, args.k, args.sigma)
+        os.makedirs(data_path, exist_ok=True)
+        generator = Generator(args.num_samples, args.num_dimensions, args.sparsity, args.k, args.sigma)
         X, Y, ground_truth, optimal_lambda, min_stat_error = generator.generate()
-        pickle.dump([X, Y, ground_truth, optimal_lambda, min_stat_error], open(data_path, "wb"))
-    ## processing network
+        pickle.dump([X, Y, ground_truth, optimal_lambda, min_stat_error], open(data_file, "wb"))
 
+    ## processing network
+    try:
+        w = pickle.load(open(network_file, "rb"))
+    except:
+        w = ErodoRenyi(m=args.num_nodes, rho=args.connectivity, p=args.probability).generate()
+        os.makedirs(network_path, exist_ok=True)
+        pickle.dump(w, open(network_file, "wb"))
 
     # solver run
     if args.solver_mode == 'centralized':
@@ -62,9 +66,9 @@ def main():
     #     solver = LocalizedLasso()
     else:
         raise NotImplementedError("solver mode currently only support centralized or distributed")
-    outputs = solver.fit(X, Y, args.r, ground_truth, verbose=args.verbose)
+    outputs = solver.fit(X, Y, ground_truth, verbose=args.verbose)
     output_filename = "./output/N{}_m{}_rho{}_{}_exp{}".format(
-        args.N, args.m, args.rho, args.solver_mode, args.data_index)
+        args.num_samples, args.num_nodes, args.connectivity, args.solver_mode, args.data_index)
     pickle.dump(outputs, open(output_filename, "w"))
 
 

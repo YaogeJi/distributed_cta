@@ -1,6 +1,6 @@
 import numpy as np
 from networkx import *
-
+from utils import MaxIterError
 
 class FullyConnectedNetwork:
     def __init__(self, m):
@@ -19,7 +19,8 @@ class ErodoRenyi:
     def generate(self):
         connected = False
         connectivity = 1
-        while True:
+        print("network generating")
+        for i in range(100000):
             G = erdos_renyi_graph(self.node, self.probability)
             connected = is_connected(G)
             if not connected:
@@ -34,7 +35,10 @@ class ErodoRenyi:
             eigenvalue, _ = np.linalg.eig(weighted_matrix)
             sorted_eigenvalue = np.sort(np.abs(eigenvalue))
             connectivity = sorted_eigenvalue[-2]
-            print(connectivity)
             if np.abs(connectivity - self.rho) < 0.001:
-                break
-        return weighted_matrix
+                print(connectivity)
+                return weighted_matrix
+        else:
+            raise MaxIterError("achieve max iteration without achieving target connectivity")
+
+

@@ -8,7 +8,7 @@ class Solver:
         self.gamma = gamma
         self.terminate_condition = terminate_condition
 
-    def fit(self, X, Y, r, ground_truth, verbose):
+    def fit(self, X, Y, ground_truth, verbose):
         raise NotImplementedError
 
     def show_param(self):
@@ -25,8 +25,9 @@ class Lasso(Solver):
         elif iter_type == "projected":
             self.r = constraint_param
 
-    def fit(self, X, Y, r, ground_truth, verbose):
+    def fit(self, X, Y, ground_truth, verbose):
         # initialize parameters we need
+        r = np.linalg.norm(ground_truth, ord=1) * 1.01
         loss = []
         N, d = X.shape
         # initialize iterates
@@ -81,8 +82,9 @@ class DistributedLasso(Lasso):
         self.w = w
         self.m = self.w.shape[0]
         
-    def fit(self, X, Y, r, ground_truth, verbose):
+    def fit(self, X, Y, ground_truth, verbose):
         # Initialize parameters we need
+        r = np.linalg.norm(ground_truth, ord=1) * 1.01
         N, d = X.shape
         n = int(N / self.m)
         # Initialize iterates
