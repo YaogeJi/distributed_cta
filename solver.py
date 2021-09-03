@@ -150,7 +150,7 @@ class DistributedLasso(Lasso):
                         print("{}/{}, log loss = {}".format(step, self.max_iteration, log_loss[-1]))
                     else:
                         print("{}/{}".format(step, self.max_iteration))
-            if ground_truth:
+            if ground_truth is not None:
                 "optimization error has bug here. shape of comparison is not consensus."
                 log_loss.append(np.log(np.linalg.norm(theta - np.repeat(ground_truth.T, self.m, axis=0), ord=2) ** 2 / self.m))
             theta_last = theta.copy()
