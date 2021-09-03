@@ -8,7 +8,8 @@ from network import ErodoRenyi
 
 # configuration
 parser = argparse.ArgumentParser(description='distributed optimization')
-parser.add_argument('--storing_file', default='', type=str, help='storing_file_name')
+parser.add_argument('--storing_filepath', default='', type=str, help='storing_file_path')
+parser.add_argument('--storing_filename', default='', type=str, help='storing_file_name')
 ## data
 parser.add_argument("-N", "--num_samples", type=int)
 parser.add_argument("-d", "--num_dimensions", type=int)
@@ -16,13 +17,13 @@ parser.add_argument("-s", "--sparsity", type=int)
 parser.add_argument("-k", type=float, default=0.25)
 parser.add_argument("--sigma", type=float, default=0.5)
 parser.add_argument("--data_index", type=int, default=0)
-
 ## network
 parser.add_argument("-m", "--num_nodes", type=int)
 parser.add_argument("-p", "--probability", default=1, type=float)
 parser.add_argument("-rho", "--connectivity", default=0, type=float)
 ## solver
 parser.add_argument("--solver_mode", choices=("centralized", "distributed", "localized"))
+parser.add_argument("--projecting", action="store_true")
 parser.add_argument("--max_iter", type=int, default=1e6)
 parser.add_argument("--tol", type=float, default=1e-10)
 parser.add_argument("--iter_type", choices=("lagrangian", "projected"))
@@ -59,17 +60,18 @@ def main():
 
     # solver run
     if args.solver_mode == 'centralized':
-        solver = Lasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda)
+        solver = Lasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda, args.projecting)
     elif args.solver_mode == 'distributed':
-        solver = DistributedLasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda, w)
+        solver = DistributedLasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda, args.projecting, w)
     # elif args.solver_mode == 'localized':
     #     solver = LocalizedLasso()
     else:
         raise NotImplementedError("solver mode currently only support centralized or distributed")
     outputs = solver.fit(X, Y, ground_truth, verbose=args.verbose)
-    output_filename = "./output/N{}_m{}_rho{}_{}_exp{}".format(
-        args.num_samples, args.num_nodes, args.connectivity, args.solver_mode, args.data_index)
-    pickle.dump(outputs, open(output_filename, "w"))
+    output_filepath = args.storing_filepath
+    output_filename = args.storing_filename
+    os.makedirs(output_filepath, exist_ok=True)
+    pickle.dump(outputs, open(output_filepath + output_filename, "wb"))
 
 
 if __name__ == "__main__":

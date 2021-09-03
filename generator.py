@@ -1,5 +1,7 @@
 import numpy as np
 from sklearn import linear_model
+from solver import Lasso
+
 
 class Generator:
     def __init__(self, N, d, s, k, sigma):
@@ -9,7 +11,7 @@ class Generator:
         self.k = k
         self.sigma = sigma
 
-    def generate(self, solver=True):
+    def generate(self, solver=False):
         # generating sample
         z = np.random.normal(0, 1, (self.N, self.d)) / np.sqrt(1-self.k**2)
         X = np.ones((self.N, self.d))
