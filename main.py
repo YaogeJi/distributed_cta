@@ -25,10 +25,11 @@ parser.add_argument("-rho", "--connectivity", default=0, type=float)
 parser.add_argument("--solver_mode", choices=("centralized", "distributed", "localized"))
 parser.add_argument("--projecting", action="store_true")
 parser.add_argument("--max_iter", type=int, default=1e6)
-parser.add_argument("--tol", type=float, default=1e-10)
+parser.add_argument("--tol", type=float, default=1e-7)
 parser.add_argument("--iter_type", choices=("lagrangian", "projected"))
 parser.add_argument("--gamma", type=float)
 parser.add_argument("--lmda", type=float)
+parser.add_argument("--optimal_lmda", action="store_true")
 ## others
 parser.add_argument("--verbose", action="store_true")
 args = parser.parse_args()
@@ -49,7 +50,6 @@ def main():
         generator = Generator(args.num_samples, args.num_dimensions, args.sparsity, args.k, args.sigma)
         X, Y, ground_truth, optimal_lambda, min_stat_error = generator.generate()
         pickle.dump([X, Y, ground_truth, optimal_lambda, min_stat_error], open(data_file, "wb"))
-
     ## processing network
     try:
         w = pickle.load(open(network_file, "rb"))
@@ -57,12 +57,15 @@ def main():
         w = ErodoRenyi(m=args.num_nodes, rho=args.connectivity, p=args.probability).generate()
         os.makedirs(network_path, exist_ok=True)
         pickle.dump(w, open(network_file, "wb"))
-
+    if args.optimal_lmda:
+        lmda = optimal_lambda
+    else:
+        lmda = args.lmda
     # solver run
     if args.solver_mode == 'centralized':
-        solver = Lasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda, args.projecting)
+        solver = Lasso(args.max_iter, args.gamma, args.tol, args.iter_type, lmda, args.projecting)
     elif args.solver_mode == 'distributed':
-        solver = DistributedLasso(args.max_iter, args.gamma, args.tol, args.iter_type, args.lmda, args.projecting, w)
+        solver = DistributedLasso(args.max_iter, args.gamma, args.tol, args.iter_type, lmda, args.projecting, w)
     # elif args.solver_mode == 'localized':
     #     solver = LocalizedLasso()
     else:

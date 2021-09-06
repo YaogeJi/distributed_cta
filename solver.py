@@ -47,7 +47,6 @@ class Lasso(Solver):
                 t = temp
             else:
                 t = proj(t, r)
-            # t = temp
             return t
 
         def _projected(t):
@@ -67,6 +66,7 @@ class Lasso(Solver):
             if ground_truth is not None:
                 log_loss.append(np.log(np.linalg.norm(theta - ground_truth, ord=2) ** 2))
             if np.linalg.norm(theta - theta_last, ord=2) < self.terminate_condition:
+            # if np.linalg.norm(theta - theta_last, ord=2) / np.linalg.norm(theta_last, ord=2)  < self.terminate_condition:
                 print("Early convergence at step {} with log loss {}, I quit.".format(step, log_loss[-1]))
                 return theta, log_loss
         else:
@@ -82,7 +82,7 @@ class DistributedLasso(Lasso):
         super(DistributedLasso, self).__init__(max_iteration, gamma, terminate_condition, iter_type, constraint_param, projecting)
         self.w = w
         self.m = self.w.shape[0]
-        
+
     def fit(self, X, Y, ground_truth, verbose):
         # Initialize parameters we need
         r = np.linalg.norm(ground_truth, ord=1) * 1.01
@@ -107,9 +107,8 @@ class DistributedLasso(Lasso):
             a, _ = np.linalg.eig(sth)
             if np.max(a) > max_eig:
                 max_eig = np.max(a)
-        # print(max_eig)
+        print(max_eig)
         beta = N * self.gamma / (max_eig * self.gamma + n)
-        # print(beta)
         # print(N/max_eig)
         # define gradient methods
 
@@ -160,7 +159,9 @@ class DistributedLasso(Lasso):
                 theta = _projected(theta)
             else:
                 raise NotImplementedError
+
             if np.linalg.norm(theta - theta_last, ord=2) < self.terminate_condition * np.sqrt(self.m):
+            # if np.linalg.norm(theta - theta_last, ord=2) / np.linalg.norm(theta_last, ord=2) < self.terminate_condition:
                 print("Early convergence at step {} with log loss {}, I quit.".format(step, log_loss[-1]))
                 return theta, log_loss
         else:
