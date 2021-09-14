@@ -167,3 +167,44 @@ class DistributedLasso(Lasso):
         else:
             print("Max iteration, I quit.")
             return theta, log_loss
+
+class SolverLasso(Lasso):
+    def fit(self, X, Y, ground_truth, verbose):
+        clf = linear_model.Lasso(alpha=self.lmda, fit_intercept=False, max_iter=self.max_iteration)
+        clf.fit(X, Y)
+        theta = clf.coef_
+        log_loss = []
+        if ground_truth is not None:
+            print(theta.shape)
+            print(ground_truth.shape)
+            log_loss.append(np.log(np.linalg.norm(theta - ground_truth.squeeze(), ord=2) ** 2))
+        return theta, log_loss
+
+
+class SolverDistributedLasso(DistributedLasso):
+    def fit(self, X, Y, ground_truth, verbose):
+        tuta_timer = time.time()
+        N, d = X.shape
+        n = int(N / self.m)
+        x, y = [], []
+        for i in range(self.m):
+            x.append(X[n*i:n*(i+1), :])
+            y.append(Y[n*i:n*(i+1), :])
+        X_2 = scipy.linalg.block_diag(*x)
+        kron_L = np.kron(np.eye(self.m) - self.w, np.eye(d))
+
+        _, s, VT = scipy.linalg.svd(kron_L)
+        SIGMA = np.diag(np.sqrt(s))
+        tmp = np.sqrt(N / self.gamma) * SIGMA @ VT
+
+        X_tuta = np.concatenate((X_2, tmp), axis=0)
+        Y_tuta = np.concatenate((Y, np.zeros((self.m*d, 1))), axis=0)
+        tuta_finish = time.time()
+        print("calculating kron matrix takes {} seconds".format(tuta_finish - tuta_timer))
+        clf = linear_model.Lasso(alpha=self.lmda / self.m * N / (N + self.m * d), fit_intercept=False, max_iter=self.max_iteration)
+        clf.fit(X_tuta, Y_tuta)
+        theta = clf.coef_
+        log_loss = []
+        if ground_truth is not None:
+            log_loss.append(np.log(np.linalg.norm(theta - np.tile(np.squeeze(ground_truth), self.m), ord=2) ** 2 / self.m))
+        return theta, log_loss
