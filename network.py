@@ -32,13 +32,16 @@ class ErodoRenyi:
                 G.add_edge(*i, weight=1/(degree + 1))
             adjacent_matrix = to_numpy_array(G)
             weighted_matrix = np.eye(self.node) - np.diag(sum(adjacent_matrix)) + adjacent_matrix
-            eigenvalue, _ = np.linalg.eig(weighted_matrix)
-            sorted_eigenvalue = np.sort(np.abs(eigenvalue))
-            connectivity = sorted_eigenvalue[-2]
-            if np.abs(connectivity - self.rho) < 0.001:
-                print(connectivity)
+            if self.node == 1:
                 return weighted_matrix
+            else:
+                eigenvalue, _ = np.linalg.eig(weighted_matrix)
+                sorted_eigenvalue = np.sort(np.abs(eigenvalue))
+                connectivity = sorted_eigenvalue[-2]
+                print(connectivity)
+                if np.abs(connectivity - self.rho) < 0.001:
+                    print("generating network succeed")
+                    print(connectivity)
+                    return weighted_matrix
         else:
             raise MaxIterError("achieve max iteration without achieving target connectivity")
-
-
